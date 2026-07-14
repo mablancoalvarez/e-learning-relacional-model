@@ -33,14 +33,14 @@ Este documento presenta el modelado relacional (basado en tablas y relaciones) p
 
 Es el eje del portal. A diferencia del modelo documental (que usa _extended reference_ embebiendo autor/categoría), aquí el vínculo con autores se resuelve mediante tabla intermedia, ya que un curso puede tener **varios** autores.
 
-| Campo         | Función relacional   | Descripción / Notas                                                                                              |
-| ------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `id`          | PK                   | Identificador único del curso.                                                                                   |
-| `nombre`      | —                    | Título del curso.                                                                                                |
-| `created_at`  | —                    | Fecha de creación. Usado para ordenar "cursos nuevos" en Home.                                                   |
-| `category_id` | FK → `Categories.id` | Necesario para resolver el breadcrumb jerárquico ("Front End >> React >> Testing");                              |
-| `is_public`   | —                    | Un curso puede ser 100% público.                                                                                 |
-| `total_views` | —                    | **Desafío.** Contador cacheado de visualizaciones totales de los vídeos del curso (ver Justificación más abajo). |
+| Campo         | Función relacional   | Descripción / Notas                                                                                 |
+| ------------- | -------------------- | --------------------------------------------------------------------------------------------------- |
+| `id`          | PK                   | Identificador único del curso.                                                                      |
+| `nombre`      | —                    | Título del curso.                                                                                   |
+| `created_at`  | —                    | Fecha de creación. Usado para ordenar "cursos nuevos" en Home.                                      |
+| `category_id` | FK → `Categories.id` | Necesario para resolver el breadcrumb jerárquico ("Front End >> React >> Testing");                 |
+| `is_public`   | —                    | Un curso puede ser 100% público.                                                                    |
+| `total_views` | —                    | Contador cacheado de visualizaciones totales de los vídeos del curso (ver Justificación más abajo). |
 
 ---
 
@@ -56,7 +56,7 @@ Es el eje del portal. A diferencia del modelo documental (que usa _extended refe
 | `cms_id`      | —                              | Referencia al contenido/metadata en el headless CMS.                     |
 | `s3_key`      | —                              | Referencia al archivo de vídeo en S3.                                    |
 | `is_public`   | —                              | Marca si este vídeo puntual es de acceso libre dentro de un curso mixto. |
-| `views_count` | —                              | **Desafío.** Contador simple, incrementado en cada reproducción.         |
+| `views_count` | —                              | Contador simple, incrementado en cada reproducción.                      |
 
 ---
 
@@ -64,16 +64,16 @@ Es el eje del portal. A diferencia del modelo documental (que usa _extended refe
 
 Estructuralmente simétrica a `Videos`.
 
-| Campo         | Función relacional             | Descripción / Notas                                      |
-| ------------- | ------------------------------ | -------------------------------------------------------- |
-| `id`          | PK, Not Null                   | Identificador único del artículo.                        |
-| `name`        | —                              | Título del artículo.                                     |
-| `course_id`   | FK → `Courses.id`, Not Null    | Artículo asociado a un solo curso.                       |
-| `category_id` | FK → `Categories.id`, Not Null | Aplicado por simetría con `Video`.                       |
-| `author_id`   | FK → `Authors.id`, Not Null    | Aplicado por simetría con `Video`.                       |
-| `cms_id`      | —                              | Referencia al cuerpo del artículo en el CMS.             |
-| `s3_key`      | —                              | Referencia a recursos multimedia embebidos, si aplica.   |
-| `is_public`   | —                              | **Parte opcional.** Misma lógica que `Videos.is_public`. |
+| Campo         | Función relacional             | Descripción / Notas                                    |
+| ------------- | ------------------------------ | ------------------------------------------------------ |
+| `id`          | PK, Not Null                   | Identificador único del artículo.                      |
+| `name`        | —                              | Título del artículo.                                   |
+| `course_id`   | FK → `Courses.id`, Not Null    | Artículo asociado a un solo curso.                     |
+| `category_id` | FK → `Categories.id`, Not Null | Aplicado por simetría con `Video`.                     |
+| `author_id`   | FK → `Authors.id`, Not Null    | Aplicado por simetría con `Video`.                     |
+| `cms_id`      | —                              | Referencia al cuerpo del artículo en el CMS.           |
+| `s3_key`      | —                              | Referencia a recursos multimedia embebidos, si aplica. |
+| `is_public`   | —                              | Misma lógica que `Videos.is_public`.                   |
 
 ---
 
@@ -198,7 +198,7 @@ Conjunto abierto y creciente de etiquetas libres — a diferencia de `Categories
 
 ---
 
-### 14. Tabla intermedia: `TagsCourses` _(Desafío)_
+### 14. Tabla intermedia: `TagsCourses`
 
 El enunciado del desafío menciona explícitamente tags en **curso o vídeo** — de ahí esta tabla en lugar de una para artículos.
 
@@ -263,8 +263,8 @@ Se guarda el importe pagado en `Payments`, independientemente de cuál sea el pr
 
 ### 📈 Visualizaciones: contador simple + contador cacheado, con consistencia eventual
 
-`Videos.views_count` se incrementa en cada reproducción — no se necesita una tabla de eventos por-visualización, porque el enunciado solo pide un total, no un historial detallado. `Courses.total_views` **no** se recalcula en cada request, ni se actualiza en la misma escritura que `views_count` — es un contador cacheado, actualizado mediante un proceso periódico en segundo plano (ej. cada hora), aceptando que puede quedar levemente desactualizado. El enunciado no exige tiempo real, así que el coste de mantenerlo exacto al segundo no se justifica frente al beneficio.
+`Videos.views_count` se incrementa en cada reproducción. `Courses.total_views` **no** se recalcula en cada request, ni se actualiza en la misma escritura que `views_count` — es un contador cacheado, actualizado mediante un proceso periódico en segundo plano (ej. cada hora), aceptando que puede quedar levemente desactualizado. El enunciado no exige tiempo real, así que el coste de mantenerlo exacto al segundo no se justifica frente al beneficio.
 
 ### 🏷️ Tags como tabla, no como `ENUM`
 
-A diferencia de `status` en `Subscriptions` (conjunto pequeño, cerrado y estable → candidato a `ENUM`), los tags son un conjunto abierto y en crecimiento constante — cualquier autor puede necesitar un tag nuevo en cualquier momento. Modelarlos como `ENUM` obligaría a una migración de esquema cada vez que aparece un tag nuevo, así que se usa una tabla `Tags` real, con tablas intermedias (`TagsVideos`, `TagsCourses`) en lugar de una única tabla polimórfica que rompería la integridad referencial nativa de SQL.
+A diferencia de `status` en `Subscriptions` (conjunto pequeño, cerrado y estable → candidato a `ENUM`), los tags son un conjunto abierto y en crecimiento constante — cualquier autor puede necesitar un tag nuevo en cualquier momento. Modelarlos como `ENUM` obligaría a una migración de esquema cada vez que aparece un tag nuevo, así que se usa una tabla `Tags` real, con tablas intermedias (`TagsVideos`, `TagsCourses`) en lugar de una única tabla polimórfica.
